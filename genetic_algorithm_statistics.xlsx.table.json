@@ -1,0 +1,49 @@
+{
+  "columns": [
+    {
+      "field": "Generation",
+      "title": "Generation",
+      "minWidth": 40,
+      "resizable": true,
+      "sorter": "number",
+      "headerSort": true,
+      "width": 126
+    },
+    {
+      "field": "Average Fitness",
+      "title": "Average Fitness",
+      "minWidth": 40,
+      "resizable": true,
+      "sorter": "number",
+      "headerSort": true,
+      "width": 155
+    },
+    {
+      "field": "Max Fitness",
+      "title": "Max Fitness",
+      "minWidth": 40,
+      "resizable": true,
+      "sorter": "number",
+      "headerSort": true,
+      "width": 130
+    },
+    {
+      "field": "Min Fitness",
+      "title": "Min Fitness",
+      "minWidth": 40,
+      "resizable": true,
+      "sorter": "number",
+      "headerSort": true,
+      "width": 127
+    },
+    {
+      "field": "Fitness Variance",
+      "title": "Fitness Variance",
+      "minWidth": 40,
+      "resizable": true,
+      "sorter": "number",
+      "headerSort": true,
+      "width": 1101
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "fields": [
+    {
+      "name": "Generation",
+      "type": "integer",
+      "format": "default"
+    },
+    {
+      "name": "Average Fitness",
+      "type": "number",
+      "format": "default"
+    },
+    {
+      "name": "Max Fitness",
+      "type": "integer",
+      "format": "default"
+    },
+    {
+      "name": "Min Fitness",
+      "type": "integer",
+      "format": "default"
+    },
+    {
+      "name": "Fitness Variance",
+      "type": "number",
+      "format": "default"
+    }
+  ],
+  "missingValues": [
+    ""
+  ]
+}
