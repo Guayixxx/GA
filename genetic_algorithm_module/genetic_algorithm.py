@@ -36,6 +36,7 @@ class GeneticAlgorithm:
         self.worst_fitness_per_generation = []
         self.average_fitness_per_generation = []
         self.variance_fitness_per_generation = []
+        self.fitness_values_per_generation = []
 
 
     def initialize_population(self):
@@ -68,6 +69,9 @@ class GeneticAlgorithm:
             'Fitness Variance': var_fitness
         })
         
+        # Guardar los valores de fitness para cada generación
+        self.fitness_values_per_generation.append(self.fitness_values)
+        
         # Almacena los valores para graficar después
         self.best_fitness_per_generation.append(max_fitness)
         self.worst_fitness_per_generation.append(min_fitness)
@@ -80,41 +84,46 @@ class GeneticAlgorithm:
 
 
     def save_fitness_over_generations(self, filename="fitness_over_generations.png"):
-        """ Guarda un gráfico de fitness promedio, mejor y peor individuo contra el número de generaciones. """
-        generations = np.arange(1, self.max_generations + 1)
-        
+        """ Guarda una gráfica del fitness promedio, mejor y peor a lo largo de las generaciones. """
         plt.figure(figsize=(10, 6))
-        plt.plot(generations, self.average_fitness_per_generation, label="Fitness Promedio", color='blue')
-        plt.plot(generations, self.best_fitness_per_generation, label="Mejor Fitness", color='green')
-        plt.plot(generations, self.worst_fitness_per_generation, label="Peor Fitness", color='red')
-        plt.xlabel('Generación')
-        plt.ylabel('Fitness')
-        plt.title('Fitness Promedio, Mejor y Peor Individuo por Generación')
+        generations = np.arange(1, len(self.best_fitness_per_generation) + 1)  # Ajusta la longitud de generaciones
+
+        plt.plot(generations, self.best_fitness_per_generation, label="Mejor Fitness", color="green")
+        plt.plot(generations, self.worst_fitness_per_generation, label="Peor Fitness", color="red")
+        plt.plot(generations, self.average_fitness_per_generation, label="Fitness Promedio", color="blue")
+
+        plt.xlabel("Generación")
+        plt.ylabel("Fitness")
+        plt.title("Evolución del Fitness a lo largo de las generaciones")
         plt.legend()
         plt.grid(True)
 
-        # Guardar la imagen en un archivo
         plt.savefig(filename)
-        plt.close()  # Cerrar para liberar memoria
+        plt.close()
 
 
     def save_boxplot_fitness(self, filename="fitness_boxplot.png"):
-        """ Guarda un diagrama de cajas con los valores de fitness a lo largo de las generaciones """
-        generations = np.arange(1, self.max_generations + 1)
-        fitness_data = []
-
-        for generation in range(self.max_generations):
-            fitness_data.append(self.fitness_values)  # Puedes agregar todos los valores de fitness en cada generación
-
+        """ Guarda un diagrama de cajas del fitness para cada generación individual. """
+        # Usar la cantidad de generaciones completadas
+        completed_generations = len(self.fitness_values_per_generation)
+    
+        # Revisar que haya datos para cada generación
+        assert completed_generations > 0, "No hay datos para generar el diagrama de cajas."
+    
+        # Preparar los datos para el boxplot
         plt.figure(figsize=(10, 6))
-        sns.boxplot(data=fitness_data, color='lightblue')
-        plt.xlabel('Generación')
-        plt.ylabel('Fitness')
-        plt.title('Distribución de Fitness por Generación (Boxplot)')
-
+        plt.boxplot(self.fitness_values_per_generation[:completed_generations], vert=True, patch_artist=True)
+    
+        # Etiquetas y configuración del gráfico
+        plt.xlabel("Generación")
+        plt.ylabel("Fitness")
+        plt.title("Diagrama de Cajas del Fitness por Generación")
+        plt.xticks(range(1, completed_generations + 1))  # Asegurarse de que haya una etiqueta por generación
+        plt.grid(True)
+    
         # Guardar la imagen en un archivo
         plt.savefig(filename)
-        plt.close()  # Cerrar para liberar memoria
+        plt.close()
 
 
     def select_parents(self):
@@ -165,28 +174,10 @@ class GeneticAlgorithm:
         if  not self.population:
             self.initialize_population()
 
-        # Para llevar el conteo de generaciones sin mejora
-        generations_without_improvement = 0
-        previous_best_fitness = None  # Variable para almacenar el mejor fitness de la generación anterior
-
         for generation in range(self.max_generations):
             
             print(f"Generación {generation + 1} de {self.max_generations}...")
             self.evaluate_fitness()
-            
-            # Verificar si el fitness máximo es igual al de la generación anterior
-            best_fitness = np.max(self.fitness_values)
-            if previous_best_fitness is not None and best_fitness == previous_best_fitness:
-                generations_without_improvement += 1
-            else:
-                generations_without_improvement = 0  # Reiniciar el contador si hubo una mejora
-
-            previous_best_fitness = best_fitness  # Actualizar el mejor fitness de la generación actual
-
-            # Si el fitness no mejora durante 15 generaciones, detener el algoritmo
-            if generations_without_improvement >= 15:
-                print("Condición de parada alcanzada: El mejor fitness no ha cambiado durante 15 generaciones.")
-                break
 
             new_population = []
 
@@ -203,6 +194,13 @@ class GeneticAlgorithm:
             self.population = self.apply_elitism(new_population)
             self.generation += 1
             self.calculate_statistics(self.generation)
+            
+            # Condición de parada si el promedio de fitness se estabiliza en las últimas 15 generaciones
+            if len(self.average_fitness_per_generation) >= 15:
+                recent_averages = self.average_fitness_per_generation[-15:]
+                if np.all(np.isclose(recent_averages, recent_averages[0], atol=1e-5)):
+                    print("Condición de parada alcanzada: El promedio de fitness se ha estabilizado en las últimas 15 generaciones.")
+                    break
             
         # Exportar estadísticas a Excel
         self.export_statistics_to_excel("genetic_algorithm_statistics.xlsx")
