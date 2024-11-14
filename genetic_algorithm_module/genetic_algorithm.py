@@ -1,21 +1,24 @@
 import numpy as np
 import random
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 from numba import jit
+from PIL import Image
+import os
 
 from .selection import Selection
 from .crossover import Crossover
 from .mutation import Mutation  
 
-
 @jit(nopython=True)
-def evaluate_fitness_numba(population):
-        return np.sum(population, axis=1)
+def evaluate_fitness_hamming(population, target_matrix):
+         # Calcula la distancia de Hamming de cada individuo con respecto a la matriz objetivo
+        fitness = np.zeros(population.shape[0])
+        for i in range(population.shape[0]):
+            # Calcula la distancia de Hamming manualmente
+            fitness[i] = 1 - np.sum(population[i] != target_matrix) / len(target_matrix)
+        return fitness
 
 class GeneticAlgorithm:
-    def __init__(self, population_size, max_generations, mutation_rate, crossover_rate, elitism_rate, chromosome_length):
+    def __init__(self, population_size, max_generations, mutation_rate, crossover_rate, elitism_rate, chromosome_length, save_interval = 1):
         self.population_size = population_size
         self.max_generations = max_generations
         self.mutation_rate = mutation_rate
@@ -29,14 +32,13 @@ class GeneticAlgorithm:
         self.mutation = Mutation(self.mutation_rate)  # Instancia de la clase Mutation
         
         self.generation = 0  # Contador de generaciones actuales
-        self.statistics = []
         
-        # Para almacenar los resultados de cada generación
-        self.best_fitness_per_generation = []
-        self.worst_fitness_per_generation = []
-        self.average_fitness_per_generation = []
-        self.variance_fitness_per_generation = []
-        self.fitness_values_per_generation = []
+        self.target_matrix = np.array([[0, 0, 0],
+                                       [1, 0, 1],
+                                       [1, 0, 1],
+                                       [0, 0, 1]]).flatten()
+        
+        self.save_interval = save_interval
 
 
     def initialize_population(self):
@@ -49,81 +51,7 @@ class GeneticAlgorithm:
 
     def evaluate_fitness(self):
         # Calcula el fitness de cada individuo y lo guarda en una lista separada
-        self.fitness_values = evaluate_fitness_numba(self.population)
-
-
-    def calculate_statistics(self, generation):
-        # Calcula las estadísticas de fitness y las añade a la lista `statistics`
-        fitness_values = self.population[:, -1]  # Última columna es el fitness
-        avg_fitness = np.mean(fitness_values)
-        max_fitness = np.max(fitness_values)
-        min_fitness = np.min(fitness_values)
-        var_fitness = np.var(fitness_values)
-
-        # Añadir estadísticas al registro de la generación actual
-        self.statistics.append({
-            'Generation': generation,
-            'Average Fitness': avg_fitness,
-            'Max Fitness': max_fitness,
-            'Min Fitness': min_fitness,
-            'Fitness Variance': var_fitness
-        })
-        
-        # Guardar los valores de fitness para cada generación
-        self.fitness_values_per_generation.append(self.fitness_values)
-        
-        # Almacena los valores para graficar después
-        self.best_fitness_per_generation.append(max_fitness)
-        self.worst_fitness_per_generation.append(min_fitness)
-        self.average_fitness_per_generation.append(avg_fitness)
-
-
-    def export_statistics_to_excel(self, filename):
-        df = pd.DataFrame(self.statistics)
-        df.to_csv(filename, index=False)
-
-
-    def save_fitness_over_generations(self, filename="fitness_over_generations.png"):
-        """ Guarda una gráfica del fitness promedio, mejor y peor a lo largo de las generaciones. """
-        plt.figure(figsize=(10, 6))
-        generations = np.arange(1, len(self.best_fitness_per_generation) + 1)  # Ajusta la longitud de generaciones
-
-        plt.plot(generations, self.best_fitness_per_generation, label="Mejor Fitness", color="green")
-        plt.plot(generations, self.worst_fitness_per_generation, label="Peor Fitness", color="red")
-        plt.plot(generations, self.average_fitness_per_generation, label="Fitness Promedio", color="blue")
-
-        plt.xlabel("Generación")
-        plt.ylabel("Fitness")
-        plt.title("Evolución del Fitness a lo largo de las generaciones")
-        plt.legend()
-        plt.grid(True)
-
-        plt.savefig(filename)
-        plt.close()
-
-
-    def save_boxplot_fitness(self, filename="fitness_boxplot.png"):
-        """ Guarda un diagrama de cajas del fitness para cada generación individual. """
-        # Usar la cantidad de generaciones completadas
-        completed_generations = len(self.fitness_values_per_generation)
-    
-        # Revisar que haya datos para cada generación
-        assert completed_generations > 0, "No hay datos para generar el diagrama de cajas."
-    
-        # Preparar los datos para el boxplot
-        plt.figure(figsize=(10, 6))
-        plt.boxplot(self.fitness_values_per_generation[:completed_generations], vert=True, patch_artist=True)
-    
-        # Etiquetas y configuración del gráfico
-        plt.xlabel("Generación")
-        plt.ylabel("Fitness")
-        plt.title("Diagrama de Cajas del Fitness por Generación")
-        plt.xticks(range(1, completed_generations + 1))  # Asegurarse de que haya una etiqueta por generación
-        plt.grid(True)
-    
-        # Guardar la imagen en un archivo
-        plt.savefig(filename)
-        plt.close()
+        self.fitness_values = evaluate_fitness_hamming(self.population, self.target_matrix)
 
 
     def select_parents(self):
@@ -169,6 +97,39 @@ class GeneticAlgorithm:
         return np.array(new_population)
 
 
+    def individual_to_image(self, individual):
+        """Convierte un cromosoma (individuo) a una imagen 2D de tamaño 4x3 (en este caso)."""
+        # Convertir el individuo (un array 1D) en una matriz 2D
+        matrix = np.array(individual).reshape(4, 3)  # Asumiendo que la matriz es 4x3
+        # Convertir la matriz binaria a una imagen en escala de grises
+        img = Image.fromarray(np.uint8(matrix * 255))  # Multiplicamos por 255 para que sea en blanco y negro
+        
+        # Redimensionar manteniendo la relación de aspecto
+        width, height = img.size
+        new_width = 400  # Nuevo ancho
+        new_height = int((new_width / width) * height)  # Calculamos la altura proporcional
+        img = img.resize((new_width, new_height), Image.NEAREST)  # Redimensionamos sin distorsionar
+        
+        return img
+
+
+    def save_individual_image(self, individual, generation):
+        """Convierte un cromosoma en imagen y guarda la imagen en un archivo en la carpeta 'images'."""
+        # Crear la carpeta si no existe
+        if not os.path.exists('images'):
+            os.makedirs('images')
+
+        # Convertir el individuo en una imagen
+        img = self.individual_to_image(individual)
+
+        # Crear un nombre de archivo único basado en la generación
+        filename = f'images/generation_{generation}_best_individual.png'
+
+        # Guardar la imagen
+        img.save(filename)
+        print(f"Imagen guardada como {filename}")
+
+
     def run(self):
 
         if  not self.population:
@@ -193,18 +154,21 @@ class GeneticAlgorithm:
 
             self.population = self.apply_elitism(new_population)
             self.generation += 1
-            self.calculate_statistics(self.generation)
             
-            # Condición de parada si el promedio de fitness se estabiliza en las últimas 15 generaciones
-            if len(self.average_fitness_per_generation) >= 15:
-                recent_averages = self.average_fitness_per_generation[-15:]
-                if np.all(np.isclose(recent_averages, recent_averages[0], atol=1e-5)):
-                    print("Condición de parada alcanzada: El promedio de fitness se ha estabilizado en las últimas 15 generaciones.")
-                    break
+            if np.any(self.fitness_values >= 1.0):  # Cuando la distancia de Hamming sea 0
+                print("Solución alcanzada con la matriz objetivo.")
+                
+                # Imprimir la matriz objetivo y la solución encontrada
+                print("Matriz Objetivo:")
+                print(self.target_matrix.reshape(4, 3))  # Reshape para mostrarla como matriz 4x3
+
+                best_individual = self.population[0]  # Suponiendo que este es el mejor individuo
+                print("Solución Encontrada:")
+                print(best_individual.reshape(4, 3))  # Reshape para mostrarla como matriz 4x3
+                
+                break
             
-        # Exportar estadísticas a Excel
-        self.export_statistics_to_excel("genetic_algorithm_statistics.xlsx")
-        
-        # Guardar las gráficas en archivos en vez de mostrarlas
-        self.save_fitness_over_generations("fitness_over_generations.png")
-        self.save_boxplot_fitness("fitness_boxplot.png")
+            # Guardar la imagen del mejor individuo solo cada 10 generaciones
+            if generation % self.save_interval == 0:  # Guarda la imagen solo cada 10 generaciones
+                best_individual = self.population[0]  # Suponiendo que este es el mejor individuo
+                self.save_individual_image(best_individual, generation)
