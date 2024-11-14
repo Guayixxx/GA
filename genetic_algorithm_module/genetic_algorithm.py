@@ -185,11 +185,11 @@ class GeneticAlgorithm:
                 print("Matriz Objetivo:")
                 print(self.target_matrix.reshape(4, 3))  # Reshape para mostrarla como matriz 4x3
 
-                best_individual = self.population[0]  # Suponiendo que este es el mejor individuo
                 print("Solución Encontrada:")
                 print(best_individual.reshape(4, 3))  # Reshape para mostrarla como matriz 4x3
                 print(f"Fitness máximo actual: {np.max(self.fitness_values)}")
-
+                self.save_individual_image(best_individual, generation)
+                
                 break
             
             # Guardar la imagen del mejor individuo solo cada 10 generaciones
