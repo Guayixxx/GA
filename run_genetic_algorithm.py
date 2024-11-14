@@ -1,6 +1,6 @@
 #run_genetic_algorithm.py
 
-from genetic_algorithm_module.genetic_algorithm import GeneticAlgorithm
+from genetic_algorithm_module.genetic_algorithm import GeneticAlgorithm, create_gif
 
 # Parámetros para el algoritmo genético
 population_size = 100
@@ -22,3 +22,6 @@ gen_algo = GeneticAlgorithm(
 
 gen_algo.run()
 print("Ejecución completa.")
+
+#Crear Gif
+create_gif(image_folder='images', output_filename='evolucion_generaciones.gif')

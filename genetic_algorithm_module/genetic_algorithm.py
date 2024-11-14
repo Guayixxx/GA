@@ -17,6 +17,28 @@ def evaluate_fitness_hamming(population, target_matrix):
             fitness[i] = 1 - np.sum(population[i] != target_matrix) / len(target_matrix)
         return fitness
 
+
+def create_gif(image_folder, output_filename, duration=500):
+        # Obtener todos los archivos de imagen en la carpeta
+        image_files = sorted(
+            [f for f in os.listdir(image_folder) if f.endswith('.png')],
+            key=lambda x: int(x.split('_')[1])  # Ordena por número de generación en el nombre
+        )
+
+        # Cargar todas las imágenes
+        images = [Image.open(os.path.join(image_folder, f)) for f in image_files]
+
+        # Crear y guardar el GIF
+        images[0].save(
+            output_filename,
+            save_all=True,
+            append_images=images[1:],
+            duration=duration,
+            loop=0  # 0 significa que el GIF se repetirá indefinidamente
+        )
+
+        print(f"GIF guardado como {output_filename}")
+
 class GeneticAlgorithm:
     def __init__(self, population_size, max_generations, mutation_rate, crossover_rate, elitism_rate, chromosome_length, save_interval = 1):
         self.population_size = population_size
@@ -155,7 +177,8 @@ class GeneticAlgorithm:
             self.population = self.apply_elitism(new_population)
             self.generation += 1
             
-            if np.any(self.fitness_values >= 1.0):  # Cuando la distancia de Hamming sea 0
+            best_individual = self.population[np.argmax(self.fitness_values)]
+            if np.array_equal(best_individual, self.target_matrix):
                 print("Solución alcanzada con la matriz objetivo.")
                 
                 # Imprimir la matriz objetivo y la solución encontrada
@@ -165,10 +188,12 @@ class GeneticAlgorithm:
                 best_individual = self.population[0]  # Suponiendo que este es el mejor individuo
                 print("Solución Encontrada:")
                 print(best_individual.reshape(4, 3))  # Reshape para mostrarla como matriz 4x3
-                
+                print(f"Fitness máximo actual: {np.max(self.fitness_values)}")
+
                 break
             
             # Guardar la imagen del mejor individuo solo cada 10 generaciones
             if generation % self.save_interval == 0:  # Guarda la imagen solo cada 10 generaciones
                 best_individual = self.population[0]  # Suponiendo que este es el mejor individuo
                 self.save_individual_image(best_individual, generation)
+                
