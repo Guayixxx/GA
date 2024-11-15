@@ -3,11 +3,11 @@
 from genetic_algorithm_module.genetic_algorithm import GeneticAlgorithm, create_gif
 
 # Parámetros para el algoritmo genético
-population_size = 10
-max_generations = 2000
-mutation_rate = 1
-crossover_rate = 0.4
-elitism_rate = 0.00000001
+population_size = 20
+max_generations = 1000
+mutation_rate = 0.8
+crossover_rate = 0.3
+elitism_rate = 0.1
 image_path = "/home/juan-pablo/Documentos/Artificial/GA/Firma.png"
 
 # Crear y ejecutar el algoritmo genético

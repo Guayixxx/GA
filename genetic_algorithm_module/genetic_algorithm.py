@@ -105,7 +105,7 @@ class GeneticAlgorithm:
 
     def apply_crossover(self, parent1, parent2):
         if random.random() < self.crossover_rate:
-            child1, child2 = self.crossover.uniform_crossover(parent1, parent2)
+            child1, child2 = self.crossover.single_point_crossover(parent1, parent2)
             assert len(child1) == self.chromosome_length and len(child2) == self.chromosome_length, \
                 "Error: Los hijos generados en crossover no tienen la longitud esperada."
             return child1, child2
@@ -115,7 +115,7 @@ class GeneticAlgorithm:
 
     def apply_mutation(self, individual):
         if random.random() < self.mutation_rate:
-            mutated_individual = self.mutation.swap_mutation(individual)
+            mutated_individual = self.mutation.flip_bit_mutation(individual)
             assert len(mutated_individual) == self.chromosome_length, \
                 "Error: El individuo mutado no tiene la longitud esperada."
             return mutated_individual
