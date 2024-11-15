@@ -10,7 +10,7 @@ from .mutation import Mutation
 
 @jit(nopython=True)
 def evaluate_fitness_hamming(population, target_matrix):
-         # Calcula la distancia de Hamming de cada individuo con respecto a la matriz objetivo
+        # Calcula la distancia de Hamming de cada individuo con respecto a la matriz objetivo
         fitness = np.zeros(population.shape[0])
         for i in range(population.shape[0]):
             # Calcula la distancia de Hamming manualmente
@@ -39,13 +39,34 @@ def create_gif(image_folder, output_filename, duration=500):
 
         print(f"GIF guardado como {output_filename}")
 
+
+def load_image_as_matrix(image_path, threshold=128):
+    """
+    Carga una imagen en escala de grises y la convierte a una matriz binaria usando un umbral.
+
+    :param image_path: Ruta de la imagen.
+    :param threshold: Umbral para clasificar los píxeles en 0 (negro) y 1 (blanco).
+    :return: binary_matrix (matriz binaria 1D), img_shape (dimensiones originales de la imagen)
+    """
+    # Cargar la imagen en modo escala de grises
+    img = Image.open(image_path).convert("L")
+    
+    # Convertir la imagen a una matriz numpy
+    img_array = np.array(img)
+    
+    # Convertir la imagen a binaria según el umbral
+    binary_matrix = (img_array >= threshold).astype(int)
+    
+    # Devolver la matriz binaria aplanada y las dimensiones de la imagen
+    return binary_matrix.flatten(), img_array.shape
+
+
 class GeneticAlgorithm:
-    def __init__(self, population_size, max_generations, mutation_rate, crossover_rate, elitism_rate, chromosome_length, save_interval = 1):
+    def __init__(self, population_size, max_generations, mutation_rate, crossover_rate, elitism_rate, image_path=None, threshold=128, save_interval = 10):
         self.population_size = population_size
         self.max_generations = max_generations
         self.mutation_rate = mutation_rate
         self.crossover_rate = crossover_rate
-        self.chromosome_length = chromosome_length
         self.elitism_rate = elitism_rate
         self.population = []  # Almacena la población actual de individuos
         
@@ -55,10 +76,10 @@ class GeneticAlgorithm:
         
         self.generation = 0  # Contador de generaciones actuales
         
-        self.target_matrix = np.array([[0, 0, 0],
-                                       [1, 0, 1],
-                                       [1, 0, 1],
-                                       [0, 0, 1]]).flatten()
+        # Cargar la imagen si se proporciona
+        if image_path:
+            self.target_matrix, self.img_shape = load_image_as_matrix(image_path, threshold)
+            self.chromosome_length = len(self.target_matrix)  # Longitud del cromosoma según la imagen
         
         self.save_interval = save_interval
 
@@ -120,18 +141,12 @@ class GeneticAlgorithm:
 
 
     def individual_to_image(self, individual):
-        """Convierte un cromosoma (individuo) a una imagen 2D de tamaño 4x3 (en este caso)."""
-        # Convertir el individuo (un array 1D) en una matriz 2D
-        matrix = np.array(individual).reshape(4, 3)  # Asumiendo que la matriz es 4x3
+        """Convierte un cromosoma en una imagen usando las dimensiones originales de la imagen."""
+        # Convertir el individuo en una matriz con las dimensiones de la imagen original
+        matrix = np.array(individual).reshape(self.img_shape)
+        
         # Convertir la matriz binaria a una imagen en escala de grises
-        img = Image.fromarray(np.uint8(matrix * 255))  # Multiplicamos por 255 para que sea en blanco y negro
-        
-        # Redimensionar manteniendo la relación de aspecto
-        width, height = img.size
-        new_width = 400  # Nuevo ancho
-        new_height = int((new_width / width) * height)  # Calculamos la altura proporcional
-        img = img.resize((new_width, new_height), Image.NEAREST)  # Redimensionamos sin distorsionar
-        
+        img = Image.fromarray(np.uint8(matrix * 255))  # Multiplica por 255 para blanco y negro
         return img
 
 
@@ -178,15 +193,15 @@ class GeneticAlgorithm:
             self.generation += 1
             
             best_individual = self.population[np.argmax(self.fitness_values)]
+            best_fitness = np.max(self.fitness_values)
+
+            # Mostrar el fitness del mejor individuo
+            print(f"Generación {generation + 1} - Mejor Fitness: {best_fitness}")
+            
             if np.array_equal(best_individual, self.target_matrix):
-                print("Solución alcanzada con la matriz objetivo.")
-                
-                # Imprimir la matriz objetivo y la solución encontrada
-                print("Matriz Objetivo:")
-                print(self.target_matrix.reshape(4, 3))  # Reshape para mostrarla como matriz 4x3
 
                 print("Solución Encontrada:")
-                print(best_individual.reshape(4, 3))  # Reshape para mostrarla como matriz 4x3
+                
                 print(f"Fitness máximo actual: {np.max(self.fitness_values)}")
                 self.save_individual_image(best_individual, generation)
                 
@@ -196,4 +211,3 @@ class GeneticAlgorithm:
             if generation % self.save_interval == 0:  # Guarda la imagen solo cada 10 generaciones
                 best_individual = self.population[0]  # Suponiendo que este es el mejor individuo
                 self.save_individual_image(best_individual, generation)
-                
