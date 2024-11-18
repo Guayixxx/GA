@@ -1,3 +1,5 @@
+# run_genetic_algorithm.py
+
 from genetic_algorithm_module.genetic_algorithm import GeneticAlgorithm, create_gif
 
 # Parámetros del algoritmo genético
