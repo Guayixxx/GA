@@ -3,7 +3,7 @@ from genetic_algorithm_module.genetic_algorithm import GeneticAlgorithm, create_
 # Parámetros del algoritmo genético
 params = {
     "population_size": 20,
-    "max_generations": 5000,
+    "max_generations": 10000,
     "mutation_rate": 0.7,
     "crossover_rate": 0.4,
     "elitism_rate": 0.2,
