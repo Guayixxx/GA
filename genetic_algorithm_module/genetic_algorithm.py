@@ -14,11 +14,32 @@ def evaluate_fitness_hamming(population, target):
     return 1 - np.mean(population != target, axis=1)
 
 
-def load_image_as_matrix(image_path, threshold=128):
-    """Carga una imagen como matriz binaria."""
-    img = Image.open(image_path).convert("L")
-    binary_matrix = (np.array(img) >= threshold).astype(int)
-    return binary_matrix.flatten(), binary_matrix.shape
+def load_image_as_rgb_matrices(image_path):
+    """
+    Carga una imagen como tres matrices independientes para los canales R, G y B.
+    
+    Args:
+        image_path (str): Ruta de la imagen a cargar.
+
+    Returns:
+        tuple: Tres matrices NumPy (R, G, B) y las dimensiones de la imagen.
+    """
+    # Abrir la imagen
+    img = Image.open(image_path).convert("RGB")
+    
+    # Convertir la imagen a una matriz NumPy
+    img_array = np.array(img)  # Dimensiones: (alto, ancho, 3)
+    
+    # Separar los canales R, G y B
+    r_channel = img_array[:, :, 0]  # Canal Rojo
+    g_channel = img_array[:, :, 1]  # Canal Verde
+    b_channel = img_array[:, :, 2]  # Canal Azul
+
+    # Calcular el tamaño del cromosoma (número de píxeles)
+    num_pixels = img_array.shape[0] * img_array.shape[1]
+
+    # Retornar las matrices y el tamaño del cromosoma
+    return r_channel.flatten(), g_channel.flatten(), b_channel.flatten(), num_pixels, img_array.shape[:2]
 
 def create_gif(image_folder, output_filename, duration=500):
     """Crea un GIF a partir de imágenes en una carpeta con formato `gen_[número].png`."""
@@ -54,9 +75,8 @@ class GeneticAlgorithm:
         self.elitism_rate = elitism_rate
         self.save_interval = save_interval
 
-        self.target_matrix, self.img_shape = load_image_as_matrix(image_path, threshold)
-        self.chromosome_length = len(self.target_matrix)
-        self.population = np.random.randint(0, 2, (population_size, self.chromosome_length))
+        self.r_target, self.g_target, self.b_target, self.chromosome_length, self.img_shape = load_image_as_rgb_matrices(image_path)
+        self.population = np.random.randint(0, 256, (population_size, self.chromosome_length))
 
         self.crossover = Crossover()
         self.mutation = Mutation(mutation_rate)
