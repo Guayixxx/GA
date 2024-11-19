@@ -18,7 +18,7 @@ def load_image_as_matrix(image_path, threshold=128):
     binary_matrix = (np.array(img) >= threshold).astype(int)
     return binary_matrix.flatten(), binary_matrix.shape
 
-def create_gif(image_folder, output_filename, duration=100):
+def create_gif(image_folder, output_filename, duration=50):
     """Crea un GIF a partir de imágenes en una carpeta con formato `gen_[número].png`."""
     # Obtener todos los archivos que terminan en .png
     image_files = sorted(
