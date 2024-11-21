@@ -13,34 +13,6 @@ def evaluate_fitness_hamming(population, target):
     """Calcula fitness como 1 - distancia Hamming normalizada."""
     return 1 - np.mean(population != target, axis=1)
 
-
-def load_image_as_rgb_matrices(image_path):
-    """
-    Carga una imagen como tres matrices independientes para los canales R, G y B.
-    
-    Args:
-        image_path (str): Ruta de la imagen a cargar.
-
-    Returns:
-        tuple: Tres matrices NumPy (R, G, B) y las dimensiones de la imagen.
-    """
-    # Abrir la imagen
-    img = Image.open(image_path).convert("RGB")
-    
-    # Convertir la imagen a una matriz NumPy
-    img_array = np.array(img)  # Dimensiones: (alto, ancho, 3)
-    
-    # Separar los canales R, G y B
-    r_channel = img_array[:, :, 0]  # Canal Rojo
-    g_channel = img_array[:, :, 1]  # Canal Verde
-    b_channel = img_array[:, :, 2]  # Canal Azul
-
-    # Calcular el tamaño del cromosoma (número de píxeles)
-    num_pixels = img_array.shape[0] * img_array.shape[1]
-
-    # Retornar las matrices y el tamaño del cromosoma
-    return r_channel.flatten(), g_channel.flatten(), b_channel.flatten(), num_pixels, img_array.shape[:2]
-
 def create_gif(image_folder, output_filename, duration=500):
     """Crea un GIF a partir de imágenes en una carpeta con formato `gen_[número].png`."""
     # Obtener todos los archivos que terminan en .png
@@ -67,15 +39,15 @@ def create_gif(image_folder, output_filename, duration=500):
     print(f"GIF guardado como {output_filename}")
 
 class GeneticAlgorithm:
-    def __init__(self, population_size, max_generations, mutation_rate, crossover_rate, elitism_rate, image_path, threshold=128, save_interval=10):
+    def __init__(self, population_size, max_generations, mutation_rate, crossover_rate, elitism_rate, target, save_interval=10):
         self.population_size = population_size
         self.max_generations = max_generations
         self.mutation_rate = mutation_rate
         self.crossover_rate = crossover_rate
         self.elitism_rate = elitism_rate
         self.save_interval = save_interval
-
-        self.r_target, self.g_target, self.b_target, self.chromosome_length, self.img_shape = load_image_as_rgb_matrices(image_path)
+        self.target = target
+        self.chromosome_length = len(self.target)
         self.population = np.random.randint(0, 256, (population_size, self.chromosome_length))
 
         self.crossover = Crossover()
@@ -83,12 +55,10 @@ class GeneticAlgorithm:
         self.fitness_values = np.zeros(self.population_size)  # Inicializamos los valores de fitness
         
         self.generation = 0
+        self.best_solutions = []
 
     def run(self):
         """Ejecuta el algoritmo genético."""
-        # Inicializar la población si no está inicializada
-        if self.population.size == 0:  # Cambié la condición aquí
-            self.initialize_population()
 
         # Crear/limpiar el archivo de log al inicio
         with open("fitness_log.txt", "w") as f:
@@ -126,19 +96,18 @@ class GeneticAlgorithm:
             with open("fitness_log.txt", "a") as f:
                 f.write(f"{generation + 1},{best_fitness:.4f}\n")
 
+            # Almacenar la mejor solución en cada generación
+            self.best_solutions.append(best_individual)
+
             # Mostrar el fitness del mejor individuo
             print(f"Generación {generation + 1} - Mejor Fitness: {best_fitness}")
 
             # Comprobar si se alcanzó la solución óptima
-            if np.array_equal(best_individual, self.target_matrix):
+            if np.array_equal(best_individual, self.target):
                 print("Solución Encontrada:")
                 print(f"Fitness máximo actual: {best_fitness}")
-                self.save_image(best_individual, generation)
                 break
 
-            # Guardar la imagen del mejor individuo solo cada intervalo
-            if generation % self.save_interval == 0:
-                self.save_image(best_individual, generation)
 
     def apply_elitism(self, new_population):
         """Aplica elitismo para mantener a los mejores individuos utilizando el método get_elites."""
@@ -156,14 +125,9 @@ class GeneticAlgorithm:
         elite_indices = np.argsort(fitness_values)[-elite_count:]
         return self.population[elite_indices]
 
-    def save_image(self, individual, generation):
-        """Convierte un individuo en imagen y lo guarda."""
-        img_array = individual.reshape(self.img_shape) * 255
-        Image.fromarray(np.uint8(img_array)).save(f'images/gen_{generation}.png')
-
     def evaluate_fitness(self):
         """Evaluar el fitness de la población utilizando la distancia Hamming."""
-        self.fitness_values = evaluate_fitness_hamming(self.population, self.target_matrix)
+        self.fitness_values = evaluate_fitness_hamming(self.population, self.target)
 
     def select_parents(self):
         """Selecciona dos padres usando la selección por ruleta."""
