@@ -13,33 +13,8 @@ def evaluate_fitness_hamming(population, target):
     """Calcula fitness como 1 - distancia Hamming normalizada."""
     return 1 - np.mean(population != target, axis=1)
 
-def create_gif(image_folder, output_filename, duration=500):
-    """Crea un GIF a partir de imágenes en una carpeta con formato `gen_[número].png`."""
-    # Obtener todos los archivos que terminan en .png
-    image_files = sorted(
-        [f for f in os.listdir(image_folder) if f.startswith('gen_') and f.endswith('.png')],
-        key=lambda x: int(x.split('_')[1].split('.')[0])  # Extraer el número después de 'gen_'
-    )
-
-    # Verificar si hay imágenes válidas
-    if not image_files:
-        raise ValueError("No se encontraron archivos de imagen válidos en la carpeta.")
-
-    # Cargar todas las imágenes
-    images = [Image.open(os.path.join(image_folder, f)) for f in image_files]
-
-    # Crear y guardar el GIF
-    images[0].save(
-        output_filename,
-        save_all=True,
-        append_images=images[1:],
-        duration=duration,
-        loop=0
-    )
-    print(f"GIF guardado como {output_filename}")
-
 class GeneticAlgorithm:
-    def __init__(self, population_size, max_generations, mutation_rate, crossover_rate, elitism_rate, target, save_interval=10):
+    def __init__(self, population_size, max_generations, mutation_rate, crossover_rate, elitism_rate, target, save_interval=10, log_filename="fitness_log.txt"):
         self.population_size = population_size
         self.max_generations = max_generations
         self.mutation_rate = mutation_rate
@@ -53,15 +28,17 @@ class GeneticAlgorithm:
         self.crossover = Crossover()
         self.mutation = Mutation(mutation_rate)
         self.fitness_values = np.zeros(self.population_size)  # Inicializamos los valores de fitness
-        
+
         self.generation = 0
-        self.best_solutions = []
+        self.best_solution = None
+        self.best_fitness = 0
+        self.no_improvement_generations = 0
+        
+        self.log_filename = log_filename
 
     def run(self):
         """Ejecuta el algoritmo genético."""
-
-        # Crear/limpiar el archivo de log al inicio
-        with open("fitness_log.txt", "w") as f:
+        with open(self.log_filename, "w") as f:
             f.write("Generación,Mejor Fitness\n")
 
         for generation in range(self.max_generations):
@@ -80,33 +57,36 @@ class GeneticAlgorithm:
                     [self.mutation.swap_mutation(child1), self.mutation.swap_mutation(child2)]
                 )
 
-            # Verificación de consistencia en new_population
-            assert all(len(ind) == self.chromosome_length for ind in new_population), \
-                "Error: Los individuos en new_population no tienen la longitud esperada antes de aplicar elitismo."
-
             # Aplicar elitismo
             self.population = self.apply_elitism(new_population)
             self.generation += 1
 
-            # Obtener el mejor individuo y su fitness
-            best_individual = self.population[np.argmax(self.fitness_values)]
-            best_fitness = np.max(self.fitness_values)
+            # Obtener el mejor individuo de esta generación
+            current_best_fitness = np.max(self.fitness_values)
+            current_best_solution = self.population[np.argmax(self.fitness_values)]
 
-            # Guardar el fitness en el archivo
-            with open("fitness_log.txt", "a") as f:
-                f.write(f"{generation + 1},{best_fitness:.4f}\n")
+            # Actualizar el mejor individuo final
+            if current_best_fitness > self.best_fitness:
+                self.best_fitness = current_best_fitness
+                self.best_solution = current_best_solution
+                self.no_improvement_generations = 0
+            else:
+                self.no_improvement_generations += 1
 
-            # Almacenar la mejor solución en cada generación
-            self.best_solutions.append(best_individual)
+            # Guardar en el log cada 10 generaciones
+            if generation % 100 == 0:
+                with open(self.log_filename, "a") as f:
+                    f.write(f"{generation + 1},{current_best_fitness:.4f}\n")
 
-            # Mostrar el fitness del mejor individuo
-            print(f"Generación {generation + 1} - Mejor Fitness: {best_fitness}")
+            print(f"Generación {generation + 1} - Mejor Fitness: {self.best_fitness:.4f}")
 
-            # Comprobar si se alcanzó la solución óptima
-            if np.array_equal(best_individual, self.target):
-                print("Solución Encontrada:")
-                print(f"Fitness máximo actual: {best_fitness}")
+            # Comprobar condiciones de parada
+            if self.best_fitness >= 0.8:
+                print("Fitness objetivo alcanzado.")
                 break
+            # if self.no_improvement_generations >= 200:
+            #     print("No hubo mejora en 50 generaciones. Deteniendo el algoritmo.")
+            #     break
 
 
     def apply_elitism(self, new_population):

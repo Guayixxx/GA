@@ -32,21 +32,20 @@ def load_image_as_rgb_matrices(image_path):
     return r_channel.flatten(), g_channel.flatten(), b_channel.flatten(), img_array.shape[:2]
 
 
-def combine_channels_and_save_images(r_solutions, g_solutions, b_solutions, img_shape, output_folder="images"):
+def combine_channels_and_save_images(r_solutions, g_solutions, b_solutions, img_shape, output_filename="evolucion_generaciones.gif"):
     """
-    Combina las soluciones de los canales R, G, B en cada generación y guarda las imágenes resultantes.
+    Combina las soluciones de los canales R, G, B y guarda un GIF de la evolución.
 
     Args:
         r_solutions (list): Soluciones del canal R por generación.
         g_solutions (list): Soluciones del canal G por generación.
         b_solutions (list): Soluciones del canal B por generación.
         img_shape (tuple): Forma original de la imagen (alto, ancho).
-        output_folder (str): Carpeta donde se guardarán las imágenes combinadas.
+        output_filename (str): Nombre del archivo GIF a guardar.
     """
-    # Crear la carpeta si no existe
-    os.makedirs(output_folder, exist_ok=True)
-
+    images = []
     num_generations = len(r_solutions)
+
     for i in range(num_generations):
         # Combinar los canales R, G, B
         r_channel = r_solutions[i].reshape(img_shape)
@@ -55,8 +54,15 @@ def combine_channels_and_save_images(r_solutions, g_solutions, b_solutions, img_
 
         combined_image = np.stack([r_channel, g_channel, b_channel], axis=-1)
 
-        # Guardar la imagen combinada
-        output_path = os.path.join(output_folder, f"gen_{i + 1}.png")
-        Image.fromarray(np.uint8(combined_image)).save(output_path)
+        # Convertir la imagen combinada en una imagen PIL
+        images.append(Image.fromarray(np.uint8(combined_image)))
 
-    print(f"Imágenes de evolución guardadas en la carpeta: {output_folder}")
+    # Crear el GIF
+    images[0].save(
+        output_filename,
+        save_all=True,
+        append_images=images[1:],
+        duration=500,
+        loop=0
+    )
+    print(f"GIF guardado como {output_filename}")
